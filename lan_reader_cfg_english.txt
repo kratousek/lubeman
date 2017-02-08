@@ -1,0 +1,9 @@
+_host=217.174.248.60
+_port=6926
+_user=nathanael
+_rcvtimeo=5
+_sndtimeo=5
+_successCheckIntevalSecMin=10
+_successCheckIntevalSecMax=20
+_failureCheckIntevalSecMin=5
+_failureCheckIntevalSecMax=15

@@ -1,0 +1,9 @@
+_host=192.168.1.208
+_port=5000
+_user=rpitest
+_rcvtimeo=5
+_sndtimeo=5
+_successCheckIntevalSecMin=10
+_successCheckIntevalSecMax=20
+_failureCheckIntevalSecMin=5
+_failureCheckIntevalSecMax=15

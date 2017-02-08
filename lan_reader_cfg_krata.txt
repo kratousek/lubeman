@@ -1,0 +1,9 @@
+_host=90.177.112.119
+_port=5001
+_user=nathanael
+_rcvtimeo=5
+_sndtimeo=5
+_successCheckIntevalSecMin=10
+_successCheckIntevalSecMax=20
+_failureCheckIntevalSecMin=5
+_failureCheckIntevalSecMax=15

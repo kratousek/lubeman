@@ -1,0 +1,6 @@
+# To solve permission issues please copy this file into 
+# /etc/udev/rules.d
+# after that, unplug/plug usb device and check log using:
+# tail /var/log/everything.log
+#
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0666", GROUP="wheel"
