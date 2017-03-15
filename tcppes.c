@@ -1166,7 +1166,7 @@ int tcppesUsername(void* lan, const char *username)
        //sprintf(chckstim,"CHK %.2X%.2X%.2X%.2X%.2X%.2X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
        //sprintf(chckstim,"%s %s\r\n",chckstim,((LANPES*)lan)->user->buf);
 
-       pesPrintf(((LANPES*)lan)->bufSnd, "USR %s",*(((LANPES*)lan)->user));
+       pesPrintf(((LANPES*)lan)->bufSnd, "USR %s ",*(((LANPES*)lan)->user));
        #ifdef MAREK
          pesPrintf(((LANPES*)lan)->bufSnd, "\r\n"); 
        #else
