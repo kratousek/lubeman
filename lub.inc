@@ -1,1 +1,1 @@
-#define MAREK
+//#define MAREK
