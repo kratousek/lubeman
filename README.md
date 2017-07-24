@@ -1,17 +1,17 @@
 # lubeman
 guard tour p3 device from tomst.com 
 
-# required packages, mainly for guardian "pyguard.py" 
-## python packages
-## they are used for ipc communication queue between main and guardian process
-## when the main process halts, guardian kill zombie and start new client
+required packages, mainly for guardian "pyguard.py" 
+python packages
+they are used for ipc communication queue between main and guardian process
+when the main process halts, guardian kill zombie and start new client
 
 +) sudo apt-get install python-pip python-dev build-essential 
 +) sudo pip install http://semanchuk.com/philip/sysv_ipc/sysv_ipc-0.7.0.tar.gz
 
-# to compile project just enter make
-# edit lan_reader_cfg.txt and set ip:port of the server
-# install service, if doesn't exists in /etc/init.d/lubemand.sh
+to compile project just enter make
+edit lan_reader_cfg.txt and set ip:port of the server
+install service, if doesn't exists in /etc/init.d/lubemand.sh
 +) just copy lubemand.sh into /etc/init.d/ 
 +) enter sudo update-rc.d lubemand.sh defaults
 
