@@ -28,7 +28,7 @@ END
 CHK 
 ```
 
-USR is taken from lan_reader_cfg.txt
-PES is timestamp with PES id number on the END
-BTN is timestamp followed by the dallas ID button (3 bytes) 
-The CHK and END lines must be  acknowledged by the "ACK"+#13#10  string
+- USR is taken from lan_reader_cfg.txt
+- PES is timestamp with PES id number on the END
+- BTN is timestamp followed by the dallas ID button (3 bytes) 
+- The CHK and END lines must be  acknowledged by the "ACK"+#13#10  string
