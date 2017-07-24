@@ -9,10 +9,10 @@ when the main process halts, guardian kill zombie and start new client
 - sudo apt-get install python-pip python-dev build-essential 
 - sudo pip install http://semanchuk.com/philip/sysv_ipc/sysv_ipc-0.7.0.tar.gz
 
-to compile project just enter make 
-edit lan_reader_cfg.txt and set ip:port of the server
-install service, if doesn't exists in /etc/init.d/lubemand.sh
-- just copy lubemand.sh into /etc/init.d/ 
+1. to compile project just enter make 
+2. edit lan_reader_cfg.txt and set ip:port of the server
+3. install service, if doesn't exists in /etc/init.d/lubemand.sh
+- copy lubemand.sh into /etc/init.d/ 
 - enter sudo update-rc.d lubemand.sh defaults
 
 client connect server on selected TCP port (see. lan_reader_cfg.txt)
