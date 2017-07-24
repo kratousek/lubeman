@@ -15,7 +15,6 @@ install service, if doesn't exists in /etc/init.d/lubemand.sh
 +) just copy lubemand.sh into /etc/init.d/ 
 +) enter sudo update-rc.d lubemand.sh defaults
 
-
 client connect server on selected TCP port (see. lan_reader_cfg.txt)
 On server you should see following 
 
