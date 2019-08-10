@@ -18,6 +18,7 @@ when the main process halts, guardian kill zombie and start new client
 client connect server on selected TCP port (see. lan_reader_cfg.txt)
 On server you should see following 
 
+TESTING
 ```
 CHK 
 USR rpitest

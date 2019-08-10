@@ -12,6 +12,7 @@
 #include "WinTypes.h"
 #include "parser.h"
 #include "engine.h"
+#include "unistd.h"
 
 #define BUF_SIZE 100
 #define MAX_DEVICES 5
@@ -60,7 +61,7 @@ BOOL scanhub(void)
 
 // trying to open device using TMD descriptor
 // or using serial number
-BOOL opendev(void)
+BOOL opendev(unsigned int baudrate)
 {
    int i;
 
@@ -421,7 +422,7 @@ BOOL p3_reconnect(void)
   // type of media on TMD probe
   strcpy(cmd,"1;$C0");
   #ifdef DEBUG
-   printf("\np3_reconnect() routine \n");
+   printf("\n\rp3_reconnect() routine \r\n");
   #endif 
   // FALSE in cmdapi means, we are not goint to calculate check for input buffer
   if (cmdsim(cmd,1,FALSE,cBufRead)==FALSE)
@@ -434,7 +435,7 @@ BOOL p3_reconnect(void)
   if (cBufRead[0]==1)
   {
     #ifdef DEBUG
-    printf("\r\r medium signature %d\n",cBufRead[0]);
+    printf("\rmedium signature %d\n",cBufRead[0]);
     #endif
 
     strcpy(cmd,"1;$D0");
@@ -452,10 +453,10 @@ BOOL p3_reconnect(void)
     }
     else
     {
-     printf("\r\rSensor is not P3 type, library support only p3 sensors \n");
-     //#ifdef DEBUG
+     //printf("\r\rSensor is not P3 type, library support only p3 sensors \n");
+     #ifdef DEBUG
        dumpBuffer(cBufRead,5);
-     //#endif 
+     #endif 
      return(FALSE);
     }
   }
@@ -855,6 +856,18 @@ BOOL p3_readeeprom(void)
  return (TRUE);
 }
 
+BOOL  p3_beep_par(BYTE par)
+{
+	BOOL ret;
+
+	sprintf(cmd, "14;$30;$%d;$55;$55;$55;$55;$55;$55;$55;$55;$55;$55;$55", par);
+	//strcpy(cmd, "14;$30;$06;$55;$55;$55;$55;$55;$55;$55;$55;$55;$55;$55");
+	ret = cmdsim(cmd, 16, TRUE, cBufRead);
+	if (ret == FALSE)
+		printf("Cannot beep common in P3 \n");
+	return (ret);
+}
+
 BOOL  p3_beep_common(void)
 {
    BOOL ret;
@@ -928,6 +941,88 @@ BYTE ByteToBCD(BYTE byt)
   ret= byt % 10 + (((byt / 10) &  0x0F)<<4);
 }
 
+int BCDToByte(BYTE byt)
+{
+  int  ret;
+  //ret = (byt % 16) + (byt / 16 ) *10;
+  ret = (byt / 16) * 10;
+  ret = byt % 16+ ret;
+  return(ret);
+}
+
+
+BOOL p3_readtime(void)
+{
+  BOOL ret;
+  static struct tm t;
+  BYTE start;
+
+  //printf("***** read time *****************************************************\r\n");
+  sprintf(cmd,"14;$30;$21;$00;$55;$55;$00;$00;$00;$00;$00;$00;$00;$55");
+  
+  ret = cmdsim(cmd,16,TRUE,cBufRead);
+  if (cBufRead[15]>0)
+  {
+     printf("\n p3_readtime cbufRead[15]=%2x\r\n ",cBufRead[15]);
+     #ifdef DEBUG
+        dumpBuffer(cBufRead,16);
+     #endif
+     ret=p3_reconnect();
+     return (FALSE);
+  }
+  if (!ret)
+    return(FALSE);
+  
+  #ifdef DEBUG
+    printf("p3_readtime OK\r\n");
+    dumpBuffer(cBufRead,16);
+
+    int year = BCDToByte(cBufRead[10]);
+    printf("vzor: 0x%02X rok: %d\r\n",cBufRead[10],year);
+
+    BYTE j,b;
+    for (int i=4;i<=10;i++)
+    {
+      j = cBufRead[i];
+      b = BCDToByte(j);
+      printf("i:%d val:0x%02X bcd: %d\r\n",
+              i,cBufRead[i],b);
+    };
+  #endif
+  start = 4;
+
+  t.tm_year = BCDToByte(cBufRead[start+6]) +100 ;
+  t.tm_mon  = BCDToByte(cBufRead[start+5] & 0x1F) -1 ;
+  t.tm_wday = BCDToByte(cBufRead[start+4] & 0x07);
+  t.tm_mday = BCDToByte(cBufRead[start+3] & 0x3F); 
+  t.tm_hour = BCDToByte(cBufRead[start+2] & 0x3F);
+  t.tm_min  = BCDToByte(cBufRead[start+1] & 0x7F);
+  t.tm_sec  = BCDToByte(cBufRead[start+0] & 0x7F);
+  printf("p3 time %02d:%02d:%02d %04d.%02d.%02d\r\n",t.tm_hour,t.tm_min,t.tm_sec,
+	  t.tm_year+1900,t.tm_mon,t.tm_mday);
+
+  time_t p3time,curtime;
+  struct tm *loctime;
+
+  p3time = mktime(&t); 
+  curtime= time(NULL);
+
+  char cal_string[30];
+  
+  strftime(cal_string,30,"%Y.%m.%d - %H:%M:%S,",  &t);
+  printf(cal_string);
+
+  double diff = difftime(p3time,curtime);
+  diff = diff / 60 / 60;  // prevedu na hodiny	
+  int hours = (diff  );
+
+  printf("diff: %3.3f hour:%d\r\n",diff,hours);
+  if (abs(hours)<5)
+    return(TRUE);
+
+  return(FALSE);
+}
+
 
 
 BOOL p3_settime(void)
@@ -949,8 +1044,9 @@ BOOL p3_settime(void)
   // shift the day 
   if (t->tm_wday==0) (t->tm_wday=7);
   sprintf(cmd,"14;$30;$20;$55;$55;$55;$%02X;$%02X;$%02X;$%02X;$%02X;$%02X;$%02X;$%02X",
-  ByteToBCD(t->tm_sec),ByteToBCD(t->tm_min),ByteToBCD(t->tm_hour),ByteToBCD(t->tm_mday), ByteToBCD(t->tm_wday),ByteToBCD(t->tm_mon+1),ByteToBCD(t->tm_year-100),0x55);
- 
+  ByteToBCD(t->tm_sec),ByteToBCD(t->tm_min),ByteToBCD(t->tm_hour),
+  ByteToBCD(t->tm_mday), ByteToBCD(t->tm_wday),
+  ByteToBCD(t->tm_mon+1),ByteToBCD(t->tm_year-100),0x55);
   //printf("%s\n",cmd); 
   
   ret=cmdsim(cmd,16,TRUE,cBufRead);

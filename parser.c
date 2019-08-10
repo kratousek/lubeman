@@ -145,7 +145,7 @@ int parsedump(UCHAR *image, WORD firstfree, parseCallbacks *processing)
   BYTE i,b1,b2,b3,b4;
   time_t secs;
   struct tm loct;
-  char ret;
+  int ret;
   
   // initialize needed variables 
   evt=enone;      // eventtype is unknown
@@ -298,16 +298,7 @@ int parsedump(UCHAR *image, WORD firstfree, parseCallbacks *processing)
           }
           print_event();
           printf("  %s, ptr:%d",ibutton,curcnt);
-          /*
-  
-          // hnusny hack pro anglicany
-          if (ibutton[0]=='F') 
-          {
-            printf("\nSUSPECT CHIP[0] FOUND %s\n",ibutton);
-            ret = -1;
-            //return(-1);
-	  }
-          */
+          
 
           // hledam substring v hlavnim stringu
           char *ffilter =strstr(ibutton,"FFF"); 
@@ -333,14 +324,15 @@ int parsedump(UCHAR *image, WORD firstfree, parseCallbacks *processing)
     }
   } while (curcnt<firstfree);
 
-  printf("\nfinal curcnt=%d, firstfree=%d\n",curcnt,firstfree);
   ret= (*processing->finalize)(processing->procData);
+  printf("\nfinal curcnt=%d, firstfree=%d, ret=proc_>finalize=%d\r\n",curcnt,firstfree,ret);
   #ifndef MAREK
-    (*processing->timeCheck)(processing->procData);
-    printf("MAREK timecheck\r\n");
+    if (*processing->timeCheck !=0)
+    {
+      (*processing->timeCheck)(processing->procData);
+      printf("MAREK timecheck\r\n");
+    }
   #endif
   return(ret);
-
-  
 }
 

@@ -19,6 +19,7 @@ int tcppesAntivandal(void*, WORD year, BYTE month, BYTE day, BYTE hour, BYTE min
 int tcppesTouch(void*, WORD year, BYTE month, BYTE day, BYTE hour, BYTE minute, BYTE second, char *ibutton);
 int tcppesKey(void*, WORD year, BYTE month, BYTE day, BYTE hour, BYTE minute, BYTE second, BYTE key);
 int tcppesCheck(void *lan);
+int tcppesCheckDB(void *lan);
 int tcppesCfgValueInt(void*, const char *name, int *val);
 
 int tcppesFinalize(void*);

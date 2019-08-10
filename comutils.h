@@ -14,5 +14,6 @@ void dumpBuffer(unsigned char *buffer, int acount);
 BOOL p3_reconnect(void);
 BOOL _purgerxtx(void);
 void clearbuffer(unsigned char *buffer, int acount);
+unsigned char calc8(ChipIDDef ID);
 
 #endif

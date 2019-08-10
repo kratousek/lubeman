@@ -1,5 +1,6 @@
 //#define DEBUG
 //#define TRACE
+#define TRACE2
 #include "lub.inc"
 #include "tcppes.h"
 #include <stdio.h>
@@ -13,6 +14,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -33,6 +35,8 @@
 8) cp lubemand.sh /etc/init.d/lubemand.sh; chmod 755 /etc/init.d/lubemand.sh; update-rc.d lubemand.sh defaults;
      to remove: update-rc.d -f lubemand.sh remove 
 */
+
+
 
 #ifdef DEBUG
 
@@ -532,19 +536,17 @@ int tcppesPrintMAC(unsigned char *mac_address)
 
 }
 
-int tcppesCheck(void *lan)
+int tcppesCheckExt(void *lan, char *stim)
 {
   char *eol;
   int sfd;
   struct sockaddr_in addr;
   struct timeval tv;
   unsigned char mac[18];
-  unsigned char chckstim[35];
+  char chckstim[35];
   size_t len;
 
-  #ifdef TRACE
-    printf("tcppesCheck\n");
-  #endif
+ 
   
   if(NULL == lan)
   {
@@ -575,14 +577,15 @@ int tcppesCheck(void *lan)
 
       if(-1 != connect(sfd, (struct sockaddr*)&addr, sizeof(addr)))
       {
-        #ifdef MAREK 
-          if(-1 != pesWrite(sfd, "CHK \r\n", 6))
-        #else
-          tcppesPrintMAC(mac);   // get mac address of the eth0 interface
-          sprintf(chckstim,"CHK %.2X%.2X%.2X%.2X%.2X%.2X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
-          sprintf(chckstim,"%s %s\r\n",chckstim,((LANPES*)lan)->user->buf);
-          if (-1 != pesWrite(sfd,chckstim,strlen(chckstim)))
-        #endif
+     #ifdef MAREK 
+	 	sprintf(chckstim,"%s \r\n",stim);
+   	    if(-1 != pesWrite(sfd, chckstim, 6))
+     #else
+        tcppesPrintMAC(mac);   // get mac address of the eth0 interface
+        sprintf(chckstim,"%s %.2X%.2X%.2X%.2X%.2X%.2X",stim,mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+        sprintf(chckstim,"%s %s\r\n",chckstim,((LANPES*)lan)->user->buf);
+        if (-1 != pesWrite(sfd,chckstim,strlen(chckstim)))
+     #endif
         {
           eol = pesReadline(((LANPES*)lan)->bufRcv, sfd);
           if(NULL != eol)
@@ -603,6 +606,9 @@ int tcppesCheck(void *lan)
             else
             {
               errPrintf("internal error(tcppesCheck-ack-1)\n");
+	      #ifdef NATHAN
+	        printf("NACK ... \r\n");
+              #endif
             }
           }
           else
@@ -636,7 +642,24 @@ int tcppesCheck(void *lan)
   return -1;
 }
 
+int tcppesCheck(void *lan)
+{
+  int ret;
+  char stim[4];
+  strcpy(stim,"CHK");
+  ret = tcppesCheckExt(lan,"CHK");
+  return(ret);
+}
 
+int tcppesCheckDB(void *lan)
+{
+  int ret;
+  ret = tcppesCheckExt(lan,"CHD");
+  #ifdef TRACE2
+    printf("tcppesCheckDB.ret=%d\r\n",ret);
+  #endif
+  return(ret);
+}
 
 int tcppesGST(void *lan)
 {
@@ -808,7 +831,7 @@ int pesSend(PESBUF *procData, const char *host, int port, int rcvtimeo, int sndt
   #ifdef TRACE
     printf("pesSend\n");
   #endif
-
+  ret = 0;
   sfd = socket(AF_INET, SOCK_STREAM, 0); 
   if(-1 != sfd)
   {
@@ -837,12 +860,12 @@ int pesSend(PESBUF *procData, const char *host, int port, int rcvtimeo, int sndt
         {
           if(-1 != pesWrite(sfd, "END \r\n", 6))
           {
-            #ifdef TRACE
+            #ifdef TRACE2
               printf("READ B\n");
             #endif
 
             eol = pesReadline(bufAux, sfd);
-            #ifdef TRACE
+            #ifdef TRACE2
                 printf("...vycteno z pesReadLine bufAux->buf: %s\r\n",bufAux->buf);
             #endif
             if(NULL != eol)
@@ -851,7 +874,7 @@ int pesSend(PESBUF *procData, const char *host, int port, int rcvtimeo, int sndt
               {
                 if(-1 != pesPrintf(bufAux, ""))
                 {
-                  #ifdef TRACE
+                  #ifdef TRACE2
                     printf("READ E '%s'\n", bufAux->buf);
                   #endif
       
@@ -866,12 +889,21 @@ int pesSend(PESBUF *procData, const char *host, int port, int rcvtimeo, int sndt
               }
               else
               {
-                errPrintf("internal error(pesSend-ack-1)\n");
+                errPrintf("NACK... internal error(pesSend-ack-1)\n");
+		#ifdef TRACE2
+		   printf("pesSend buf%s not ACK",bufAux->buf);
+		#endif
+		ret = -2; // SERVER zije, ale z nejakeho duvodu neposila ACK, alebrz prazdny string nebo NCK
+
               }
             }
             else
             {
               errPrintf("internal error(pesSend-pesReadline-1)\n");
+	      #ifdef TRACE2
+	        printf("NOT EOL \r\n");
+	      #endif
+	      ret = -3; // ACK neni ukoncen #13#10
             }
             pesReset(bufAux, NULL);
           }
@@ -900,7 +932,10 @@ int pesSend(PESBUF *procData, const char *host, int port, int rcvtimeo, int sndt
   {
     errPrintf("internal error(pesSend-socket-1)\n");
   }
-  
+  // je to popsana chyba ? 
+  if (ret<0)
+	 return(ret);
+		 
   return -1;
 }
 
@@ -1312,7 +1347,9 @@ int tcppesTouch(void* lan, WORD year, BYTE month, BYTE day, BYTE hour, BYTE minu
   #ifdef TRACE
     printf("tcppesTouch [%s]\n", ibutton);
   #endif
-
+	
+  
+	
   if(NULL == lan || ((LANPES*)lan)->error == -1)
   {
     return -1;
@@ -1355,11 +1392,67 @@ int tcppesKey(void* lan, WORD year, BYTE month, BYTE day, BYTE hour, BYTE minute
   return -1;
 }
 
+
+int tcppesFinStore(LANPES *lan)
+{
+#ifdef TRACE2
+	printf("tcppesFinStore\n");
+#endif
+
+	if (0 == pesLoadFile("pes_store.txt", lan->bufAux))
+	{
+		// try to send touches from file
+		if(-1 != pesSend(lan->bufAux, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
+		{
+			remove("pes_store.txt");
+		}
+		else
+		{
+#ifdef NO_SERVER
+			remove("pes_store.txt");
+#else
+			errPrintf("internal error(tcppesFinStore-pesSend-1)\n");
+#endif
+		}
+	}
+	pesReset(lan->bufAux, NULL);
+
+	// send just downloaded touches
+	if(-1 != pesSend(lan->bufSnd, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
+	{
+		tcppesResetData(lan);
+		return 0;
+	}
+	else
+	{
+		errPrintf("internal error(tcppesFinStore-pesSend-2)\n");
+
+		// sending was not successfull, try to save touches into file
+		if(-1 != pesSave(lan->bufSnd))
+		{
+			tcppesResetData(lan);
+			return 0;
+		}
+		else
+		{
+			// also saving into file was not succesfull, put touches into log
+			errPrintf("internal error(tcppesFinStore-pesSave-1): dump data here:\n");
+			errPrintf(lan->bufSnd->buf);
+
+			tcppesResetData(lan);
+			return -1;
+		}
+	}
+}
+
+
 int tcppesFinalize(void* lan)
 {
   #ifdef TRACE
     printf("tcppesFinalize\n");
   #endif
+	
+  //tcppesFinStore(lan);
 
   if(NULL == lan)
   {
@@ -1384,8 +1477,9 @@ int tcppesFinalize(void* lan)
 
 int tcppesFinOnline(LANPES *lan)
 {
-  #ifdef TRACE
-    printf("tcppesFinOnline\n");
+  int ret ;
+  #ifdef TRACE2
+    printf("\r\n...tcppesFinOnline\r\n");
   #endif
 
   #if 1
@@ -1401,9 +1495,11 @@ int tcppesFinOnline(LANPES *lan)
   #else
   
     // send just downloaded touches
-    if(-1 != pesSend(lan->bufSnd, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
+    ret = pesSend(lan->bufSnd, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv);
+    //if(-1 != pesSend(lan->bufSnd, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
+    if (ret >-1)
     {
-      #ifdef TRACE
+      #ifdef TRACE2
          printf("----jsem pred tcppesResetData\n");
       #endif
       tcppesResetData(lan);
@@ -1414,62 +1510,17 @@ int tcppesFinOnline(LANPES *lan)
       // also saving into file was not succesfull, put touches into log
       errPrintf("internal error(tcppesFinOnline-pesSend-1): dump data here:\n");
       errPrintf(lan->bufSnd->buf);
-  
       tcppesResetData(lan);
-      return -1;
-    }
-
-  #endif
-}
-
-int tcppesFinStore(LANPES *lan)
-{
-  #ifdef TRACE
-    printf("tcppesFinStore\n");
-  #endif
-
-  if(0 == pesLoadFile("pes_store.txt", lan->bufAux))
-  {
-    // try to send touches from file
-    if(-1 != pesSend(lan->bufAux, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
-    {
-      remove("pes_store.txt");
-    }
-    else
-    {
-      #ifdef NO_SERVER
-        remove("pes_store.txt");
-      #else
-        errPrintf("internal error(tcppesFinStore-pesSend-1)\n");
+      #ifdef TRACE2
+           printf("tcppesFinOnline.pesSend == ret\r\n",ret);
       #endif
+      return (ret);
     }
-  }
-  pesReset(lan->bufAux, NULL);
 
-  // send just downloaded touches
-  if(-1 != pesSend(lan->bufSnd, lan->host->buf, lan->port, lan->rcvtimeo, lan->sndtimeo, lan->bufRcv))
-  {
-    tcppesResetData(lan);
-    return 0;
-  }
-  else
-  {
-    errPrintf("internal error(tcppesFinStore-pesSend-2)\n");
-
-    // sending was not successfull, try to save touches into file
-    if(-1 != pesSave(lan->bufSnd))
-    {
-      tcppesResetData(lan);
-      return 0;
-    }
-    else
-    {
-      // also saving into file was not succesfull, put touches into log
-      errPrintf("internal error(tcppesFinStore-pesSave-1): dump data here:\n");
-      errPrintf(lan->bufSnd->buf);
-
-      tcppesResetData(lan);
-      return -1;
-    }
-  }
+  #endif
 }
+
+
+
+
+

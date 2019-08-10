@@ -25,7 +25,7 @@ typedef struct _PesEepromRecord
 
 
 BOOL scanhub(void);
-BOOL opendev(void);
+BOOL opendev(unsigned int baudrate);
 BOOL closedev(void);
 BOOL getadapternumber(char *AdapterNumber);
 BOOL tmd_version(UCHAR *hw, UCHAR *fw);
@@ -34,6 +34,11 @@ BOOL p3_eventcount(WORD *firstfree,BYTE *bank);
 BOOL p3_readtourwork(WORD firstfree, UCHAR *memdump); // this reads all p3 data
 BOOL p3_readeeprom(void); // read settings from P3
 BOOL p3_pointer(void);    // zjisti jaky je pointer na data
+BOOL p3_beep_common(void);
+BOOL p3_beep_ok(void);
+BOOL p3_beep_par(BYTE par);
+
+BOOL p3_readtime(void);
 FT_STATUS  _poweron(void);
 FT_STATUS  _poweroff(void);
 BOOL p3_delete(void);

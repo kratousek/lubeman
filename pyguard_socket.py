@@ -7,7 +7,7 @@ import socket               # Import socket module
 import uuid                 # mac adress
 import os                   # communication with the system 
 import signal               # killing process
-from subprocess import check_output, CalledProcessError
+from   subprocess import check_output, CalledProcessError
 
 
 #### Format the line    ####
